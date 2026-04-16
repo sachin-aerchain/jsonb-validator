@@ -114,15 +114,15 @@
       <div class="tab-panel" id="tab-ai">
         <div class="panel-header">
           <h1>AI analysis</h1>
-          <p>Analyse your SQL and JSON structure with Claude to detect null propagation risks, structural mismatches, and get a corrected query.</p>
+          <p>Analyse your SQL and JSON structure with Gemini to detect null propagation risks, structural mismatches, and get a corrected query.</p>
         </div>
 
         <div class="ai-settings-bar">
           <div class="config-field">
-            <label class="config-label" for="ai-api-key">Anthropic API key</label>
-            <input class="config-input ai-key-input" type="password" id="ai-api-key" placeholder="sk-ant-…" autocomplete="off" />
+            <label class="config-label" for="ai-api-key">Google AI Studio API key <a class="ai-key-link" href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Get a free key ↗</a></label>
+            <input class="config-input ai-key-input" type="password" id="ai-api-key" placeholder="AIza…" autocomplete="off" />
           </div>
-          <span class="ai-key-hint">Saved in localStorage. Only sent to the Anthropic API.</span>
+          <span class="ai-key-hint">Free tier · Saved in localStorage · Only sent to the Gemini API.</span>
         </div>
 
         <div class="editor-wrap">
@@ -145,12 +145,12 @@
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="5.5" stroke="currentColor" stroke-width="1.4"/><path d="M4.5 7h2M6.5 5v2m0 0 1.5 1.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
             Analyse with AI
           </button>
-          <span class="editor-hint">Uses claude-sonnet-4-20250514 via the Anthropic API.</span>
+          <span class="editor-hint">Uses gemini-2.0-flash via the Gemini API (free tier).</span>
         </div>
 
         <div id="ai-loading" class="ai-loading hidden">
           <div class="ai-spinner"></div>
-          <span>Analysing with Claude…</span>
+          <span>Analysing with Gemini…</span>
         </div>
 
         <div id="ai-response" class="ai-response hidden"></div>

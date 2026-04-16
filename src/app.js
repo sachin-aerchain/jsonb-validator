@@ -185,7 +185,7 @@ async function runAiAnalysis() {
   const btnEl      = document.getElementById('btn-ai-analyse');
 
   if (!apiKey) {
-    responseEl.innerHTML = '<div class="ai-error"><strong>API key required.</strong> Enter your Anthropic API key at the top of this tab.</div>';
+    responseEl.innerHTML = '<div class="ai-error"><strong>API key required.</strong> Enter your Google AI Studio API key at the top of this tab. <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener" style="color:inherit;text-decoration:underline">Get a free key ↗</a></div>';
     responseEl.classList.remove('hidden');
     return;
   }
@@ -200,20 +200,17 @@ async function runAiAnalysis() {
   btnEl.disabled = true;
 
   try {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
-        'content-type': 'application/json',
-        'anthropic-dangerous-direct-browser-calls': 'true'
-      },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 2048,
-        messages: [{ role: 'user', content: buildAiPrompt(sql, sampleJson) }]
-      })
-    });
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${encodeURIComponent(apiKey)}`,
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: buildAiPrompt(sql, sampleJson) }] }],
+          generationConfig: { maxOutputTokens: 2048 }
+        })
+      }
+    );
 
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
@@ -221,7 +218,7 @@ async function runAiAnalysis() {
     }
 
     const data = await res.json();
-    const text = data.content?.[0]?.text || '';
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
     responseEl.innerHTML = formatAiResponse(text);
     responseEl.classList.remove('hidden');
     responseEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
