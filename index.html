@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>JSONB Query Validator</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="src/style.css" />
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="sidebar-top">
+        <div class="logo">
+          <span class="logo-icon">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="2" y="2" width="7" height="7" rx="1.5" fill="currentColor" opacity=".9"/><rect x="11" y="2" width="7" height="7" rx="1.5" fill="currentColor" opacity=".5"/><rect x="2" y="11" width="7" height="7" rx="1.5" fill="currentColor" opacity=".5"/><rect x="11" y="11" width="7" height="7" rx="1.5" fill="currentColor" opacity=".2"/></svg>
+          </span>
+          <span class="logo-text">jsonb<strong>guard</strong></span>
+        </div>
+        <p class="sidebar-desc">Validates PostgreSQL queries against <code>QuoteRequests</code> and <code>TrTemplates</code> schema columns.</p>
+      </div>
+      <nav class="sidebar-nav">
+        <button class="nav-item active" data-tab="validate">
+          <svg width="15" height="15" viewBox="0 0 15 15"><path d="M2 4h11M2 7.5h8M2 11h5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          Validate query
+        </button>
+        <button class="nav-item" data-tab="checklist">
+          <svg width="15" height="15" viewBox="0 0 15 15"><path d="M2.5 7.5l3 3 7-7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Pre-flight checklist
+        </button>
+        <button class="nav-item" data-tab="patterns">
+          <svg width="15" height="15" viewBox="0 0 15 15"><rect x="2" y="2" width="4" height="4" rx="1" stroke="currentColor" stroke-width="1.2"/><rect x="9" y="2" width="4" height="4" rx="1" stroke="currentColor" stroke-width="1.2"/><rect x="2" y="9" width="4" height="4" rx="1" stroke="currentColor" stroke-width="1.2"/><rect x="9" y="9" width="4" height="4" rx="1" stroke="currentColor" stroke-width="1.2"/></svg>
+          Safe patterns
+        </button>
+        <button class="nav-item" data-tab="about">
+          <svg width="15" height="15" viewBox="0 0 15 15"><circle cx="7.5" cy="7.5" r="5.5" stroke="currentColor" stroke-width="1.2"/><path d="M7.5 7v4M7.5 5v.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          Why this matters
+        </button>
+      </nav>
+      <div class="sidebar-footer">
+        <span>jsonbguard v1.0</span>
+      </div>
+    </aside>
+
+    <main class="main">
+      <!-- VALIDATE TAB -->
+      <div class="tab-panel active" id="tab-validate">
+        <div class="panel-header">
+          <h1>Validate your query</h1>
+          <p>Paste any UPDATE or SELECT that touches a <code>schema</code> JSONB column.</p>
+        </div>
+
+        <div class="editor-wrap">
+          <div class="editor-toolbar">
+            <span class="editor-label">SQL</span>
+            <div class="editor-actions">
+              <button class="btn-ghost" id="btn-broken">Load buggy example</button>
+              <button class="btn-ghost" id="btn-fixed">Load fixed example</button>
+              <button class="btn-ghost" id="btn-clear">Clear</button>
+            </div>
+          </div>
+          <textarea id="sql-input" spellcheck="false" placeholder="Paste your SQL here…&#10;&#10;Example:&#10;UPDATE &quot;QuoteRequests&quot; SET schema = (&#10;  SELECT jsonb_set(schema, '{sections}', …)&#10;) WHERE &quot;templateId&quot; IN (925, 948);"></textarea>
+          <div class="editor-footer">
+            <button class="btn-primary" id="btn-analyse">
+              <svg width="14" height="14" viewBox="0 0 14 14"><path d="M2 7h10M7 2l5 5-5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              Analyse query
+            </button>
+            <span class="editor-hint">Checks null propagation, missing COALESCE, absent WHERE guards, and more.</span>
+          </div>
+        </div>
+
+        <div id="results-wrap" class="results-wrap hidden"></div>
+      </div>
+
+      <!-- CHECKLIST TAB -->
+      <div class="tab-panel" id="tab-checklist">
+        <div class="panel-header">
+          <h1>Pre-flight checklist</h1>
+          <p>Run through this before executing any production query on schema columns.</p>
+        </div>
+        <div class="checklist-grid" id="checklist-grid"></div>
+        <div class="checklist-progress">
+          <div class="progress-bar-wrap"><div class="progress-bar" id="progress-bar"></div></div>
+          <span id="progress-label">0 / 10 completed</span>
+        </div>
+      </div>
+
+      <!-- PATTERNS TAB -->
+      <div class="tab-panel" id="tab-patterns">
+        <div class="panel-header">
+          <h1>Safe query patterns</h1>
+          <p>Copy-paste templates for the most common JSONB update scenarios.</p>
+        </div>
+        <div id="patterns-list"></div>
+      </div>
+
+      <!-- ABOUT TAB -->
+      <div class="tab-panel" id="tab-about">
+        <div class="panel-header">
+          <h1>Why this matters</h1>
+          <p>Understanding the JSONB null propagation problem.</p>
+        </div>
+        <div class="about-content">
+          <div class="about-card">
+            <h2>The root cause</h2>
+            <p>In PostgreSQL, <code>jsonb_agg()</code> returns <code>NULL</code> when it aggregates zero rows — not an empty array. When this null is passed directly into <code>jsonb_set()</code>, it silently overwrites the target field with <code>null</code>, corrupting data.</p>
+            <p>In your schema structure (<code>schema → sections[] → fields[]</code>), any section that has an empty or missing <code>fields</code> key will cause the inner <code>jsonb_agg</code> to return <code>NULL</code>, which then propagates upward and nullifies the entire section's <code>fields</code>.</p>
+          </div>
+          <div class="about-card danger-card">
+            <h2>The dangerous pattern</h2>
+            <pre class="code-block">jsonb_set(
+  section,
+  '{fields}',
+  -- ⚠ If section has no fields, this returns NULL
+  (SELECT jsonb_agg(...)
+   FROM jsonb_array_elements(section->'fields') AS field)
+)</pre>
+          </div>
+          <div class="about-card safe-card">
+            <h2>The safe pattern</h2>
+            <pre class="code-block">jsonb_set(
+  section,
+  '{fields}',
+  -- ✓ Falls back to original value if agg returns NULL
+  COALESCE(
+    (SELECT jsonb_agg(...)
+     FROM jsonb_array_elements(section->'fields') AS field),
+    section->'fields'
+  )
+)</pre>
+          </div>
+          <div class="about-card">
+            <h2>Defence-in-depth layers</h2>
+            <div class="layers">
+              <div class="layer"><span class="layer-num">1</span><div><strong>COALESCE every jsonb_agg</strong> — fall back to original value</div></div>
+              <div class="layer"><span class="layer-num">2</span><div><strong>schema IS NOT NULL</strong> — skip rows with null columns</div></div>
+              <div class="layer"><span class="layer-num">3</span><div><strong>jsonb_typeof = 'array'</strong> — ensure sections/fields are arrays before iterating</div></div>
+              <div class="layer"><span class="layer-num">4</span><div><strong>EXISTS filter</strong> — only touch rows that actually have the target key</div></div>
+              <div class="layer"><span class="layer-num">5</span><div><strong>BEGIN / COMMIT</strong> — wrap in a transaction so you can ROLLBACK</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="src/checks.js"></script>
+  <script src="src/app.js"></script>
+</body>
+</html>
