@@ -169,15 +169,27 @@ function escHtml(str) {
 }
 
 // ── AI Analysis ──────────────────────────────────────────────────────────────
+// BAKED_API_KEY is replaced at deploy time by the CI workflow (GitHub Secret).
+// When running locally it stays as the placeholder and falls back to localStorage.
+const BAKED_API_KEY = '__GEMINI_API_KEY__';
+const _keyIsBaked = BAKED_API_KEY && !BAKED_API_KEY.startsWith('__');
+
 const AI_KEY_STORE = 'jsonbguard_api_key';
 const aiKeyInput = document.getElementById('ai-api-key');
-aiKeyInput.value = localStorage.getItem(AI_KEY_STORE) || '';
-aiKeyInput.addEventListener('input', () => localStorage.setItem(AI_KEY_STORE, aiKeyInput.value));
+const aiSettingsBar = document.querySelector('.ai-settings-bar');
+
+if (_keyIsBaked) {
+  // Key is provided by the environment — hide the input so users don't see it
+  aiSettingsBar.style.display = 'none';
+} else {
+  aiKeyInput.value = localStorage.getItem(AI_KEY_STORE) || '';
+  aiKeyInput.addEventListener('input', () => localStorage.setItem(AI_KEY_STORE, aiKeyInput.value));
+}
 
 document.getElementById('btn-ai-analyse').addEventListener('click', runAiAnalysis);
 
 async function runAiAnalysis() {
-  const apiKey     = document.getElementById('ai-api-key').value.trim();
+  const apiKey     = _keyIsBaked ? BAKED_API_KEY : document.getElementById('ai-api-key').value.trim();
   const sql        = document.getElementById('ai-sql-input').value.trim();
   const sampleJson = document.getElementById('ai-json-input').value.trim();
   const loadingEl  = document.getElementById('ai-loading');
